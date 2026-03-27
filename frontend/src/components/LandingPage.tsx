@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './AuthModal';
 
 interface LandingPageProps {
-  onAnalyze: (query: string) => void;
+  onAnalyze: (query: string, articleUrl?: string) => void;
 }
 
 function getGreeting(name: string): string {
@@ -22,18 +22,18 @@ function getGreeting(name: string): string {
 const LandingPage = ({ onAnalyze }: LandingPageProps) => {
   const { user, profile, signOut } = useAuth();
   const [authModal, setAuthModal] = useState<'login' | 'signup' | null>(null);
-  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
+  const [pendingQuery, setPendingQuery] = useState<{ query: string; url?: string } | null>(null);
   const [query, setQuery] = useState('');
   const [trending, setTrending] = useState<TrendingStory[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [visible, setVisible] = useState(false);
 
   // Gate analyze behind auth
-  const tryAnalyze = (q: string) => {
+  const tryAnalyze = (q: string, articleUrl?: string) => {
     if (user) {
-      onAnalyze(q);
+      onAnalyze(q, articleUrl);
     } else {
-      setPendingQuery(q);
+      setPendingQuery({ query: q, url: articleUrl });
       setAuthModal('login');
     }
   };
@@ -43,7 +43,7 @@ const LandingPage = ({ onAnalyze }: LandingPageProps) => {
     if (user) {
       setAuthModal(null);
       if (pendingQuery) {
-        onAnalyze(pendingQuery);
+        onAnalyze(pendingQuery.query, pendingQuery.url);
         setPendingQuery(null);
       }
     }
@@ -264,7 +264,7 @@ const LandingPage = ({ onAnalyze }: LandingPageProps) => {
             {cardStories.map((story, i) => (
               <button
                 key={story.id}
-                onClick={() => tryAnalyze(story.title)}
+                onClick={() => tryAnalyze(story.title, story.url)}
                 className={`text-left glass-panel-hover rounded-2xl overflow-hidden group active:scale-[0.98] transition-all duration-500 ${
                   trendingVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 }`}
@@ -337,7 +337,7 @@ const LandingPage = ({ onAnalyze }: LandingPageProps) => {
             {localStories.slice(0, 6).map((story, i) => (
               <button
                 key={story.id}
-                onClick={() => tryAnalyze(story.title)}
+                onClick={() => tryAnalyze(story.title, story.url)}
                 className={`text-left glass-panel-hover rounded-2xl overflow-hidden group active:scale-[0.98] transition-all duration-500 ${
                   localVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 }`}

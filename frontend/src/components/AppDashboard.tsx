@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Menu, X, Home, Zap } from 'lucide-react';
+import { MessageCircle, Menu, X, Home, Zap, Layers } from 'lucide-react';
 import AppSidebar from '@/components/AppSidebar';
 import BriefingPanel from '@/components/BriefingPanel';
 import QADock from '@/components/QADock';
@@ -12,9 +12,10 @@ interface AppDashboardProps {
   articleMeta: ArticleMeta[];
   onNewSearch: (query: string) => void;
   onGoHome: () => void;
+  onDeepDive: () => void;
 }
 
-const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch, onGoHome }: AppDashboardProps) => {
+const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch, onGoHome, onDeepDive }: AppDashboardProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingQuestion, setPendingQuestion] = useState<string | undefined>();
   const [chatOpen, setChatOpen] = useState(true);
@@ -109,6 +110,7 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
           articleMeta={articleMeta}
           onAskQuestion={handleAskQuestion}
           deepgramApiKey={deepgramKey || undefined}
+          onDeepDive={onDeepDive}
         />
 
         {/* Chat toggle button */}

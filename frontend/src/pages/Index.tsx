@@ -4,11 +4,12 @@ import LandingPage from '@/components/LandingPage';
 import LoadingScreen from '@/components/LoadingScreen';
 import AppDashboard from '@/components/AppDashboard';
 import ForYouPage from '@/components/ForYouPage';
+import DeepDivePage from '@/components/DeepDivePage';
 import { analyzeStoryStream, type AnalyzeResponse, type ArticleMeta, type StreamProgress } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-type AppState = 'landing' | 'loading' | 'dashboard' | 'foryou';
+type AppState = 'landing' | 'loading' | 'dashboard' | 'foryou' | 'deepdive';
 
 const Index = () => {
   const { user, profile } = useAuth();
@@ -36,7 +37,7 @@ const Index = () => {
     }, 350);
   }, []);
 
-  const handleAnalyze = useCallback((query: string) => {
+  const handleAnalyze = useCallback((query: string, articleUrl?: string) => {
     setState('loading');
     setLoadingProgress(undefined);
     abortRef.current?.abort();
@@ -57,6 +58,7 @@ const Index = () => {
         toast.error(error || 'Failed to analyze story');
         setState('landing');
       },
+      articleUrl,
     );
   }, []);
 
@@ -64,6 +66,16 @@ const Index = () => {
 
   if (state === 'loading') {
     return <LoadingScreen onComplete={() => {}} onCancel={handleCancel} progress={loadingProgress} />;
+  }
+
+  if (state === 'deepdive' && sessionId) {
+    return (
+      <DeepDivePage
+        sessionId={sessionId}
+        storyTitle={storyData?.title || ''}
+        onBack={() => setState('dashboard')}
+      />
+    );
   }
 
   if (state === 'dashboard' && storyData) {
@@ -75,6 +87,7 @@ const Index = () => {
         articleMeta={articleMeta}
         onNewSearch={(query) => handleAnalyze(query)}
         onGoHome={() => setState('landing')}
+        onDeepDive={() => setState('deepdive')}
       />
     );
   }

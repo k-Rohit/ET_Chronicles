@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronDown, ExternalLink, Newspaper, Volume2, Pause, Loader2 } from 'lucide-react';
+import { ChevronDown, ExternalLink, Newspaper, Volume2, Pause, Loader2, Layers } from 'lucide-react';
 import type { StoryData, ArticleMeta } from '@/services/api';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
@@ -15,9 +15,10 @@ interface BriefingPanelProps {
   articleMeta: ArticleMeta[];
   onAskQuestion: (q: string) => void;
   deepgramApiKey?: string;
+  onDeepDive?: () => void;
 }
 
-const BriefingPanel = ({ story, articleCount, articleMeta, onAskQuestion, deepgramApiKey }: BriefingPanelProps) => {
+const BriefingPanel = ({ story, articleCount, articleMeta, onAskQuestion, deepgramApiKey, onDeepDive }: BriefingPanelProps) => {
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   // Build TTS text
@@ -53,6 +54,17 @@ const BriefingPanel = ({ story, articleCount, articleMeta, onAskQuestion, deepgr
             {ttsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : isPlaying ? <Pause className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
             {ttsLoading ? 'Loading…' : isPlaying ? 'Pause' : 'Listen'}
           </button>
+
+          {/* Deep Dive */}
+          {onDeepDive && (
+            <button
+              onClick={onDeepDive}
+              className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full border border-primary/20 text-primary/80 hover:bg-primary/5 hover:border-primary/40 transition-all duration-200 active:scale-[0.96]"
+            >
+              <Layers className="w-3 h-3" />
+              Deep Dive
+            </button>
+          )}
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight leading-tight text-balance mb-4">
           {story.title}

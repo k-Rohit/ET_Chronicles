@@ -13,8 +13,8 @@ from sse_starlette.sse import EventSourceResponse
 
 load_dotenv()
 
-from news_scraper import search_and_extract
-from ai_engine import generate_briefing_rag, chat_answer_rag
+from news_scraper import search_and_extract, extract_article_content
+from ai_engine import generate_briefing_rag, chat_answer_rag, generate_deep_dive
 from trending import get_trending_stories, get_local_news, get_foryou_stories
 from auth import get_current_user
 
@@ -60,6 +60,9 @@ class LocalNewsRequest(BaseModel):
     city: str
     state: str = ""
 
+class DeepDiveRequest(BaseModel):
+    session_id: str
+
 class ForYouRequest(BaseModel):
     domains: list[str]
 
@@ -72,30 +75,40 @@ async def health():
 
 
 @app.get("/api/analyze-stream")
-async def analyze_stream(query: str, request: Request, user: dict = Depends(get_current_user)):
+async def analyze_stream(query: str, request: Request, url: str = "", user: dict = Depends(get_current_user)):
     """
     SSE endpoint: streams progress events during analysis,
     then sends the final result as a single JSON event.
+    If `url` is provided, fetches that single article directly (skips search).
     """
     query = query.strip()
     if not query:
         raise HTTPException(400, "Query cannot be empty")
 
+    direct_url = url.strip()
+
     async def event_generator():
         from rag_engine import rag_pipeline
 
         try:
-            # Step 1: Scrape
-            yield {"event": "progress", "data": json.dumps({"step": "scraping", "message": "Searching Economic Times..."})}
+            if direct_url:
+                # Direct article mode: skip search, fetch the specific article
+                yield {"event": "progress", "data": json.dumps({"step": "scraping", "message": "Fetching article..."})}
 
-            articles = await search_and_extract(query, max_articles=10)
+                article = await extract_article_content(direct_url)
+                articles = [article] if article else []
+            else:
+                # Search mode: find articles matching the query
+                yield {"event": "progress", "data": json.dumps({"step": "scraping", "message": "Searching Economic Times..."})}
+
+                articles = await search_and_extract(query, max_articles=10)
 
             if not articles:
                 yield {"event": "error", "data": json.dumps({"message": "No Economic Times articles found for this topic"})}
                 return
 
             # Step 2: RAG pipeline (chunk, embed, retrieve)
-            yield {"event": "progress", "data": json.dumps({"step": "embedding", "message": f"Analyzing {len(articles)} articles with AI..."})}
+            yield {"event": "progress", "data": json.dumps({"step": "embedding", "message": f"Reading & analyzing {len(articles)} articles..."})}
 
             retrieved_chunks, all_chunks, faiss_index = await rag_pipeline(query, articles, top_k=15)
 
@@ -218,6 +231,35 @@ async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     except Exception as e:
         print(f"Error in /api/chat: {e}")
         raise HTTPException(500, f"Chat failed: {str(e)}")
+
+
+@app.post("/api/deep-dive")
+async def deep_dive(req: DeepDiveRequest, user: dict = Depends(get_current_user)):
+    """Generate a magazine-style deep dive from the session's article chunks."""
+    session = sessions.get(req.session_id)
+    if not session:
+        raise HTTPException(404, "Session not found. Please analyze a story first.")
+
+    try:
+        all_chunks = session.get("all_chunks", [])
+        story = session.get("story", {})
+
+        if not all_chunks:
+            raise HTTPException(400, "No article data available for deep dive")
+
+        result = await generate_deep_dive(
+            query=story.get("topic", ""),
+            chunks=all_chunks[:20],
+            story_context=story,
+        )
+
+        return {"deepDive": result}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in /api/deep-dive: {e}")
+        raise HTTPException(500, f"Deep dive generation failed: {str(e)}")
 
 
 @app.get("/api/trending")

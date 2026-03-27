@@ -155,6 +155,45 @@ export async function fetchForYou(domains: string[]): Promise<TrendingStory[]> {
   return data.stories || [];
 }
 
+// ── Deep Dive ───────────────────────────────────────────────────
+
+export interface DeepDiveData {
+  headline: string;
+  subtitle: string;
+  narrative: { heading: string; body: string }[];
+  sentiment: {
+    score: number;
+    label: string;
+    summary: string;
+    signals: { source: string; direction: string; detail: string }[];
+  };
+  bull_bear: {
+    bull_title: string;
+    bull_points: string[];
+    bear_title: string;
+    bear_points: string[];
+    verdict: string;
+  };
+  key_numbers: { value: string; label: string; context: string }[];
+  eli5: string;
+  scenarios: { title: string; description: string; likelihood: string; timeframe: string }[];
+}
+
+export async function fetchDeepDive(sessionId: string): Promise<DeepDiveData> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE}/api/deep-dive`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Deep dive failed" }));
+    throw new Error(err.detail || "Deep dive failed");
+  }
+  const data = await res.json();
+  return data.deepDive;
+}
+
 // ── SSE Streaming API ───────────────────────────────────────────
 
 export interface StreamProgress {
@@ -172,9 +211,13 @@ export function analyzeStoryStream(
   onProgress: (progress: StreamProgress) => void,
   onResult: (data: AnalyzeResponse) => void,
   onError: (error: string) => void,
+  articleUrl?: string,
 ): AbortController {
   const controller = new AbortController();
-  const url = `${API_BASE}/api/analyze-stream?query=${encodeURIComponent(query)}`;
+  let url = `${API_BASE}/api/analyze-stream?query=${encodeURIComponent(query)}`;
+  if (articleUrl) {
+    url += `&url=${encodeURIComponent(articleUrl)}`;
+  }
 
   authHeaders().then((headers) => {
     fetch(url, { signal: controller.signal, headers })
