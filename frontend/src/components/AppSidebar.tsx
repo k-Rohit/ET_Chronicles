@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Search, Flame, BarChart3, Zap, Loader2, Home, MapPin } from 'lucide-react';
+import { Search, Flame, Zap, Loader2, Home, MapPin } from 'lucide-react';
 import { fetchTrending, fetchLocalNews, type TrendingStory } from '@/services/api';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 interface AppSidebarProps {
   onSelectStory: (title: string) => void;
-  activeMode: 'briefing' | 'deepdive';
-  onModeChange: (mode: 'briefing' | 'deepdive') => void;
   searchQuery: string;
   onSearch: (q: string) => void;
   onSearchSubmit?: () => void;
   onGoHome?: () => void;
 }
 
-const AppSidebar = ({ onSelectStory, activeMode, onModeChange, searchQuery, onSearch, onSearchSubmit, onGoHome }: AppSidebarProps) => {
+const AppSidebar = ({ onSelectStory, searchQuery, onSearch, onSearchSubmit, onGoHome }: AppSidebarProps) => {
   const [trending, setTrending] = useState<TrendingStory[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [feedTab, setFeedTab] = useState<'trending' | 'local'>('trending');
@@ -29,7 +27,6 @@ const AppSidebar = ({ onSelectStory, activeMode, onModeChange, searchQuery, onSe
       .finally(() => setLoadingTrending(false));
   }, []);
 
-  // Fetch local news when location is available
   useEffect(() => {
     if (!location?.city) return;
     setLoadingLocal(true);
@@ -88,34 +85,6 @@ const AppSidebar = ({ onSelectStory, activeMode, onModeChange, searchQuery, onSe
         </form>
       </div>
 
-      {/* Mode Toggle */}
-      <div className="px-5 pb-4">
-        <div className="flex gap-1 p-1 bg-secondary rounded-xl">
-          <button
-            onClick={() => onModeChange('briefing')}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg transition-all duration-200 ${
-              activeMode === 'briefing'
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Briefing
-          </button>
-          <button
-            onClick={() => onModeChange('deepdive')}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg transition-all duration-200 ${
-              activeMode === 'deepdive'
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            Deep Dive
-          </button>
-        </div>
-      </div>
-
       {/* Feed Tabs: Trending / Local */}
       <div className="px-5 pb-2">
         <div className="flex items-center gap-3 mb-3">
@@ -145,7 +114,6 @@ const AppSidebar = ({ onSelectStory, activeMode, onModeChange, searchQuery, onSe
 
       <div className="flex-1 overflow-y-auto px-3 pb-4">
         {feedTab === 'trending' ? (
-          // Trending feed
           loadingTrending ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
@@ -170,7 +138,6 @@ const AppSidebar = ({ onSelectStory, activeMode, onModeChange, searchQuery, onSe
             </div>
           )
         ) : (
-          // Local feed
           !location && !geoLoading && !geoError ? (
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
               <MapPin className="w-6 h-6 text-primary/40 mb-3" />

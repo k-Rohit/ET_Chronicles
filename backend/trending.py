@@ -283,6 +283,37 @@ async def fetch_local_news(city_slug: str) -> list[dict]:
             except Exception as e:
                 print(f"Failed to fetch ET city page {url}: {e}")
 
+        # Also check latest news page for fresh local articles
+        try:
+            resp = await client.get(f"{ET_BASE}/news/latest-news")
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                for link in soup.find_all("a", href=True):
+                    href = link["href"]
+                    title = link.get_text(strip=True)
+                    if "/articleshow/" not in href:
+                        continue
+                    if not title or len(title) < 15 or len(title) > 120:
+                        continue
+                    title_key = title.lower().strip()
+                    if title_key in seen_titles:
+                        continue
+                    if not href.startswith("http"):
+                        href = ET_BASE + href
+                    score = _local_relevance(title, href, city_slug)
+                    if score > 0:
+                        seen_titles.add(title_key)
+                        # Boost score for latest-news articles (they're fresher)
+                        candidates.append({
+                            "title": title,
+                            "tag": city_slug.title(),
+                            "url": href,
+                            "image": "",
+                            "_score": score + 0.3,
+                        })
+        except Exception as e:
+            print(f"Failed to fetch latest news for local filter: {e}")
+
         # If city page didn't yield results, search ET for city news
         if not candidates:
             from urllib.parse import quote
@@ -356,6 +387,113 @@ async def fetch_local_news(city_slug: str) -> list[dict]:
 
 # Local news cache: keyed by city slug
 _local_cache: dict[str, dict] = {}
+
+
+# ── For You / Domain-based News ────────────────────────────────
+
+# Map user preference domain IDs → ET section URL paths
+DOMAIN_TO_ET_SECTIONS: dict[str, list[str]] = {
+    "markets": ["markets", "markets/stocks"],
+    "tech": ["tech"],
+    "startups": ["tech/startups"],
+    "economy": ["news/economy", "news/economy/policy"],
+    "industry": ["news/industry"],
+    "banking": ["industry/banking/finance"],
+    "real-estate": ["wealth/real-estate"],
+    "auto": ["industry/auto"],
+    "energy": ["industry/energy"],
+    "global": ["news/international"],
+    "defence": ["news/defence"],
+    "crypto": ["markets/cryptocurrency"],
+}
+
+_foryou_cache: dict[str, dict] = {}
+FORYOU_CACHE_TTL = 300  # 5 minutes
+
+
+async def _fetch_section_stories(client: httpx.AsyncClient, section: str, limit: int = 6) -> list[dict]:
+    """Scrape an ET section page for article links."""
+    stories = []
+    seen = set()
+    url = f"{ET_BASE}/{section}"
+    try:
+        resp = await client.get(url, timeout=10.0)
+        if resp.status_code != 200:
+            return []
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            title = link.get_text(strip=True)
+            if "/articleshow/" not in href:
+                continue
+            if not title or len(title) < 15 or len(title) > 120:
+                continue
+            tkey = title.lower().strip()
+            if tkey in seen:
+                continue
+            seen.add(tkey)
+            if not href.startswith("http"):
+                href = ET_BASE + href
+            tag = _extract_tag_from_url(href)
+            stories.append({"title": title, "tag": tag, "url": href, "image": ""})
+            if len(stories) >= limit:
+                break
+    except Exception as e:
+        print(f"Failed to fetch ET section {section}: {e}")
+    return stories
+
+
+async def get_foryou_stories(domains: list[str]) -> list[dict]:
+    """Fetch personalized stories based on user's preferred domains."""
+    import asyncio
+
+    cache_key = ",".join(sorted(domains))
+    now = time.time()
+    cached = _foryou_cache.get(cache_key)
+    if cached and (now - cached["timestamp"]) < FORYOU_CACHE_TTL:
+        return cached["stories"]
+
+    # Collect all ET sections for the given domains
+    sections = []
+    for d in domains:
+        sections.extend(DOMAIN_TO_ET_SECTIONS.get(d, []))
+    if not sections:
+        return []
+
+    # Fetch all sections in parallel
+    async with httpx.AsyncClient(follow_redirects=True, headers=HEADERS) as client:
+        tasks = [_fetch_section_stories(client, sec, limit=5) for sec in sections]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Merge and deduplicate
+    seen = set()
+    all_stories = []
+    for result in results:
+        if isinstance(result, list):
+            for s in result:
+                tkey = s["title"].lower().strip()
+                if tkey not in seen:
+                    seen.add(tkey)
+                    all_stories.append(s)
+
+    # Take top stories, assign IDs
+    final = all_stories[:18]
+    for i, s in enumerate(final):
+        s["id"] = str(i + 1)
+
+    # Fetch OG images in parallel
+    if final:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=HEADERS) as img_client:
+            img_tasks = [_fetch_og_image(img_client, s["url"]) for s in final]
+            img_results = await asyncio.gather(*img_tasks, return_exceptions=True)
+            for s, img in zip(final, img_results):
+                if isinstance(img, str) and img:
+                    s["image"] = img
+
+    if final:
+        _foryou_cache[cache_key] = {"stories": final, "timestamp": now}
+
+    return final
 
 
 async def get_local_news(city: str, state: str = "") -> dict:

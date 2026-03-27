@@ -142,7 +142,6 @@ Return a JSON object with EXACTLY this structure (no markdown, no code fences, j
 Rules:
 - keyFacts: exactly 6 concise, data-driven facts from the articles
 - impactCards: exactly 3 cards for different stakeholder groups
-- keyPlayers: 3-5 major people/organizations involved
 - timeline: 4-8 chronological events showing how the story evolved
 - suggestedQuestions: 5 questions a reader might want to ask
 - whatToWatch: 3 forward-looking predictions

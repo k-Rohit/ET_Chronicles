@@ -1,38 +1,45 @@
 """
-Supabase JWT auth dependency for FastAPI.
-Verifies the Bearer token from the Authorization header.
+Supabase auth dependency for FastAPI.
+Verifies the Bearer token by calling Supabase's auth API.
 """
 
 import os
-import jwt
-from fastapi import Depends, HTTPException, Request
+import httpx
+from fastapi import HTTPException, Request
 
 
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 
 async def get_current_user(request: Request) -> dict:
     """
-    FastAPI dependency that extracts and verifies the Supabase JWT.
-    Returns the decoded payload (contains sub, email, etc.).
+    FastAPI dependency that verifies the Supabase JWT by calling
+    Supabase's auth.getUser() endpoint. Returns the user object.
     """
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(500, "Server auth not configured (missing SUPABASE_JWT_SECRET)")
-
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(401, "Missing or invalid authorization header")
 
     token = auth_header[7:]
+
+    if not SUPABASE_URL:
+        raise HTTPException(500, "Server auth not configured (missing SUPABASE_URL)")
+
+    # Verify token by calling Supabase auth API
     try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(401, "Invalid token")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "apikey": SUPABASE_ANON_KEY,
+                },
+            )
+            if resp.status_code != 200:
+                raise HTTPException(401, "Invalid or expired token")
+            return resp.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(401, "Token verification failed")

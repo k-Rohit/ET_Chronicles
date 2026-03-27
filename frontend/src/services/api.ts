@@ -143,6 +143,18 @@ export async function fetchLocalNews(city: string, state: string = ""): Promise<
   return res.json();
 }
 
+export async function fetchForYou(domains: string[]): Promise<TrendingStory[]> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE}/api/foryou`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ domains }),
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.stories || [];
+}
+
 // ── SSE Streaming API ───────────────────────────────────────────
 
 export interface StreamProgress {

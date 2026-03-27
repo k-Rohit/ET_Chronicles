@@ -15,7 +15,7 @@ load_dotenv()
 
 from news_scraper import search_and_extract
 from ai_engine import generate_briefing_rag, chat_answer_rag
-from trending import get_trending_stories, get_local_news
+from trending import get_trending_stories, get_local_news, get_foryou_stories
 from auth import get_current_user
 
 
@@ -59,6 +59,9 @@ class ChatRequest(BaseModel):
 class LocalNewsRequest(BaseModel):
     city: str
     state: str = ""
+
+class ForYouRequest(BaseModel):
+    domains: list[str]
 
 
 # ── Endpoints ────────────────────────────────────────────────────
@@ -245,6 +248,19 @@ async def local_news(req: LocalNewsRequest):
     except Exception as e:
         print(f"Error in /api/local-news: {e}")
         raise HTTPException(500, f"Failed to fetch local news: {str(e)}")
+
+
+@app.post("/api/foryou")
+async def foryou(req: ForYouRequest, user: dict = Depends(get_current_user)):
+    """Fetch personalized news based on user's preferred domains."""
+    if not req.domains:
+        raise HTTPException(400, "No domains provided")
+    try:
+        stories = await get_foryou_stories(req.domains)
+        return {"stories": stories}
+    except Exception as e:
+        print(f"Error in /api/foryou: {e}")
+        raise HTTPException(500, f"Failed to fetch personalized news: {str(e)}")
 
 
 @app.get("/api/config")
