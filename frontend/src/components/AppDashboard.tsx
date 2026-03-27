@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Menu, X, Home, Zap, BarChart3 } from 'lucide-react';
+import { MessageCircle, Menu, X, Home, Zap } from 'lucide-react';
 import AppSidebar from '@/components/AppSidebar';
 import BriefingPanel from '@/components/BriefingPanel';
-import DeepDivePanel from '@/components/DeepDivePanel';
 import QADock from '@/components/QADock';
 import type { StoryData, ArticleMeta } from '@/services/api';
 
@@ -16,7 +15,6 @@ interface AppDashboardProps {
 }
 
 const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch, onGoHome }: AppDashboardProps) => {
-  const [mode, setMode] = useState<'briefing' | 'deepdive'>('briefing');
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingQuestion, setPendingQuestion] = useState<string | undefined>();
   const [chatOpen, setChatOpen] = useState(true);
@@ -68,29 +66,12 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
             <span className="text-sm font-semibold text-foreground">ET Chronicle</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Mobile mode toggle */}
-          <div className="flex gap-0.5 p-0.5 bg-secondary rounded-lg">
-            <button
-              onClick={() => setMode('briefing')}
-              className={`p-1.5 rounded-md transition-all ${mode === 'briefing' ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setMode('deepdive')}
-              className={`p-1.5 rounded-md transition-all ${mode === 'deepdive' ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
-            >
-              <Zap className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <button
-            onClick={onGoHome}
-            className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Home className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={onGoHome}
+          className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Home className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -100,8 +81,6 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
           <div className="absolute left-0 top-0 bottom-0 w-72 animate-slide-in-right" onClick={(e) => e.stopPropagation()}>
             <AppSidebar
               onSelectStory={handleSelectStory}
-              activeMode={mode}
-              onModeChange={setMode}
               searchQuery={searchQuery}
               onSearch={handleSearch}
               onSearchSubmit={handleSearchSubmit}
@@ -115,8 +94,6 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
       <div className="hidden lg:block">
         <AppSidebar
           onSelectStory={handleSelectStory}
-          activeMode={mode}
-          onModeChange={setMode}
           searchQuery={searchQuery}
           onSearch={handleSearch}
           onSearchSubmit={handleSearchSubmit}
@@ -126,17 +103,13 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto pt-16 lg:pt-10 pb-10 px-4 sm:px-8 lg:px-14 relative">
-        {mode === 'briefing' ? (
-          <BriefingPanel
-            story={story}
-            articleCount={articleCount}
-            articleMeta={articleMeta}
-            onAskQuestion={handleAskQuestion}
-            deepgramApiKey={deepgramKey || undefined}
-          />
-        ) : (
-          <DeepDivePanel story={story} deepgramApiKey={deepgramKey || undefined} />
-        )}
+        <BriefingPanel
+          story={story}
+          articleCount={articleCount}
+          articleMeta={articleMeta}
+          onAskQuestion={handleAskQuestion}
+          deepgramApiKey={deepgramKey || undefined}
+        />
 
         {/* Chat toggle button */}
         {!chatOpen && (

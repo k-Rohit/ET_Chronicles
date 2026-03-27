@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ArrowRight, Brain, Zap, Flame, Loader2, Mic, MapPin, LogOut, UserCircle } from 'lucide-react';
+import { Search, ArrowRight, Brain, Zap, Flame, Loader2, Mic, MapPin, LogOut, UserCircle, Sparkles } from 'lucide-react';
 import { fetchTrending, fetchLocalNews, type TrendingStory } from '@/services/api';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -230,8 +230,8 @@ const LandingPage = ({ onAnalyze }: LandingPageProps) => {
       <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 pb-16 sm:pb-24">
         <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 transition-all duration-700 delay-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           {[
-            { icon: Brain, title: 'AI Briefings', desc: 'All articles condensed into one structured story with key facts, impact analysis, and key players.', accent: 'text-primary' },
-            { icon: Zap, title: 'Deep Dive', desc: 'Key quotes, sentiment breakdown, and TL;DR flashcards — understand the full picture in seconds.', accent: 'text-sentiment-positive' },
+            { icon: Brain, title: 'AI Briefings', desc: 'All articles condensed into one structured story with key facts, impact analysis, and timeline.', accent: 'text-primary' },
+            { icon: Sparkles, title: 'For You', desc: 'Personalized news feed curated from your preferred domains — markets, tech, startups, and more.', accent: 'text-violet-400' },
             { icon: Mic, title: 'Voice Q&A', desc: 'Ask questions by voice or text. Get concise, cited answers grounded in ET journalism.', accent: 'text-sentiment-caution' },
           ].map((f) => (
             <div

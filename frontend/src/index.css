@@ -154,3 +154,45 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Page transition */
+.page-transition-enter {
+  animation: pageIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.page-transition-exit {
+  animation: pageOut 0.35s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes pageOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-40px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+/* Sparkle float animation for For You button */
+@keyframes sparkle-float {
+  0%, 100% { transform: translateY(0); box-shadow: 0 0 12px 2px hsl(187 72% 52% / 0.3); }
+  50% { transform: translateY(-4px); box-shadow: 0 0 24px 4px hsl(187 72% 52% / 0.5); }
+}
+.animate-sparkle-float {
+  animation: sparkle-float 2.5s ease-in-out infinite;
+}
