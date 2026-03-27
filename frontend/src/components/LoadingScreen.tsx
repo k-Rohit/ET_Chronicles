@@ -16,7 +16,7 @@ const STEP_MAP: Record<string, number> = {
 
 const STEP_LABELS = [
   'Searching Economic Times…',
-  'Analyzing & embedding articles…',
+  'Reading & analyzing articles…',
   'Generating intelligence briefing…',
 ];
 

@@ -20,7 +20,7 @@ const DOMAIN_LABELS: Record<string, { label: string; icon: string }> = {
 
 interface ForYouPageProps {
   onBack: () => void;
-  onAnalyze: (query: string) => void;
+  onAnalyze: (query: string, articleUrl?: string) => void;
 }
 
 const ForYouPage = ({ onBack, onAnalyze }: ForYouPageProps) => {
@@ -125,7 +125,7 @@ const ForYouPage = ({ onBack, onAnalyze }: ForYouPageProps) => {
             {stories.map((story, i) => (
               <button
                 key={story.id}
-                onClick={() => onAnalyze(story.title)}
+                onClick={() => onAnalyze(story.title, story.url)}
                 className={`text-left glass-panel-hover rounded-2xl overflow-hidden group active:scale-[0.98] transition-all duration-500 ${
                   visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                 }`}

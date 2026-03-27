@@ -327,3 +327,72 @@ Return a JSON object (no markdown fences):
         text = text.strip()
 
     return json.loads(text)
+
+
+async def generate_deep_dive(query: str, chunks: list[dict], story_context: dict) -> dict:
+    """
+    Generate a magazine-style deep dive from RAG chunks and the existing briefing context.
+    """
+    context = _build_chunk_context(chunks)
+    story_summary = story_context.get("summary", "")
+    story_title = story_context.get("title", "")
+
+    prompt = f"""You are a senior editorial analyst at ET Chronicle. Generate a magazine-style deep dive for: "{story_title}"
+
+Story Summary: {story_summary}
+
+SOURCE EXCERPTS:
+{context}
+
+Return JSON:
+{{
+  "headline": "A provocative, magazine-style headline (different from the briefing title)",
+  "subtitle": "A one-line editorial hook that makes the reader want to scroll",
+  "narrative": [
+    {{
+      "heading": "Section heading (compelling, not generic)",
+      "body": "2-4 detailed paragraphs telling this part of the story. Write like a long-form journalist — include specific names, numbers, dates, context. Connect the dots between different sources. This should read like a magazine feature article, not a summary."
+    }}
+  ],
+  "sentiment": {{
+    "score": 0.3,
+    "label": "bullish|bearish|neutral|mixed",
+    "summary": "2-sentence analysis of overall sentiment across all sources",
+    "signals": [
+      {{"source": "article/entity name", "direction": "positive|negative|neutral", "detail": "one-line signal"}}
+    ]
+  }},
+  "bull_bear": {{
+    "bull_title": "The Bull Case (3-5 words)",
+    "bull_points": ["point1", "point2", "point3"],
+    "bear_title": "The Bear Case (3-5 words)",
+    "bear_points": ["point1", "point2", "point3"],
+    "verdict": "1-2 sentence balanced verdict"
+  }},
+  "key_numbers": [
+    {{"value": "formatted number/stat", "label": "what it measures", "context": "why it matters (1 sentence)"}}
+  ],
+  "eli5": "3-4 sentence explanation in simple everyday language. No jargon.",
+  "scenarios": [
+    {{"title": "Scenario name (3-6 words)", "description": "2-3 sentence outcome", "likelihood": "likely|possible|unlikely", "timeframe": "e.g. 3-6 months"}}
+  ]
+}}
+
+Rules:
+- narrative: 3-5 sections. This is the CORE of the deep dive — a detailed, well-written editorial that synthesizes all the articles into one cohesive long-form story. Each section body should be 150-300 words. Use specific details, data, names from the articles. Write engagingly, not robotically.
+- sentiment.score: float -1 (bearish) to 1 (bullish)
+- sentiment.signals: 3-4 from different sources
+- bull_bear: exactly 3 points each, specific with data
+- key_numbers: 4-6 stats from articles
+- scenarios: exactly 3 (1 likely, 1 possible, 1 unlikely) with timeframes
+- All content grounded in provided excerpts"""
+
+    response = await client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5,
+        max_tokens=4000,
+        response_format={"type": "json_object"},
+    )
+
+    return json.loads(response.choices[0].message.content)
