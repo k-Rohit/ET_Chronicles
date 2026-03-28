@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, Lightbulb, Target, Loader2 } from 'lucide-react';
 import { fetchDeepDive, type DeepDiveData } from '@/services/api';
-import AppFooter from '@/components/AppFooter';
 
 interface DeepDivePageProps {
   sessionId: string;
@@ -307,8 +306,8 @@ const DeepDivePage = ({ sessionId, storyTitle, onBack }: DeepDivePageProps) => {
         </div>
       </section>
 
-      {/* ─── FOOTER ─── */}
-      <section className="max-w-5xl mx-auto px-6 pt-6 pb-2 text-center">
+      {/* ─── BACK ─── */}
+      <section className="max-w-5xl mx-auto px-6 py-10 text-center">
         <button
           onClick={onBack}
           className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
@@ -316,7 +315,6 @@ const DeepDivePage = ({ sessionId, storyTitle, onBack }: DeepDivePageProps) => {
           Back to Briefing
         </button>
       </section>
-      <AppFooter />
     </div>
   );
 };
