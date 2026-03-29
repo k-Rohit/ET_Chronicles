@@ -30,7 +30,7 @@ Reading 10 articles on the same topic to piece together the full picture is exha
 
 ## The Solution
 
-**ET Chronicle** scrapes Economic Times articles in real-time, runs them through a **RAG pipeline** (chunk, embed, retrieve), and delivers structured intelligence via GPT-4o-mini that you can *interact* with — personalized feeds, AI briefings, and voice-powered Q&A, all grounded in ET journalism.
+**EditoriaAl** scrapes Economic Times articles in real-time, runs them through a **RAG pipeline** (chunk, embed, retrieve), and delivers structured intelligence via GPT-4o-mini that you can *interact* with — personalized feeds, AI briefings, and voice-powered Q&A, all grounded in ET journalism.
 
 ---
 
