@@ -18,7 +18,7 @@ interface AppDashboardProps {
 const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch, onGoHome, onDeepDive }: AppDashboardProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingQuestion, setPendingQuestion] = useState<string | undefined>();
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(() => window.innerWidth >= 1024);
   const [deepgramKey, setDeepgramKey] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
