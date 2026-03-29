@@ -9,6 +9,7 @@ python-dotenv
 lxml
 lxml_html_clean
 pydantic
+torch --index-url https://download.pytorch.org/whl/cpu
 sentence-transformers
 faiss-cpu
 numpy
