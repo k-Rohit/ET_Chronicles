@@ -126,14 +126,26 @@ const AppDashboard = ({ story, sessionId, articleCount, articleMeta, onNewSearch
 
       {/* QA Dock */}
       {chatOpen && (
-        <div className="w-96 shrink-0 hidden lg:flex flex-col relative animate-slide-in-right">
-          <QADock
-            sessionId={sessionId}
-            storyTitle={story.title}
-            initialQuestion={pendingQuestion}
-            onClose={() => setChatOpen(false)}
-          />
-        </div>
+        <>
+          {/* Mobile: full-screen overlay */}
+          <div className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden animate-fade-up">
+            <QADock
+              sessionId={sessionId}
+              storyTitle={story.title}
+              initialQuestion={pendingQuestion}
+              onClose={() => setChatOpen(false)}
+            />
+          </div>
+          {/* Desktop: side panel */}
+          <div className="w-96 shrink-0 hidden lg:flex flex-col relative animate-slide-in-right">
+            <QADock
+              sessionId={sessionId}
+              storyTitle={story.title}
+              initialQuestion={pendingQuestion}
+              onClose={() => setChatOpen(false)}
+            />
+          </div>
+        </>
       )}
     </div>
   );
