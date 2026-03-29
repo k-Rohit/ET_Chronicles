@@ -33,6 +33,16 @@ app.add_middleware(
 sessions: dict[str, dict] = {}
 
 
+@app.get("/")
+async def root():
+    return {
+        "service": "EditoriAI API",
+        "status": "running",
+        "description": "AI-powered news intelligence backend",
+        "docs": "/docs",
+    }
+
+
 def _build_article_meta(articles: list[dict]) -> list[dict]:
     """Build article metadata list for frontend."""
     meta = []
