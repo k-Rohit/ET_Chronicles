@@ -1,24 +1,44 @@
 """
 RAG engine: chunking, embedding, FAISS indexing, and retrieval.
-Uses sentence-transformers (all-MiniLM-L6-v2) for local embeddings
+Uses OpenAI text-embedding-3-small for embeddings
 and FAISS for in-memory vector search.
 """
 
 import asyncio
 import numpy as np
 import faiss
+from openai import OpenAI
+import os
 
-EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output dimension
+EMBEDDING_DIM = 1536  # text-embedding-3-small output dimension
+EMBEDDING_MODEL = "text-embedding-3-small"
 
-# Lazy-loaded model (avoids blocking uvicorn reload watcher)
-_model = None
+_client = None
 
-def _get_model():
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
+def _get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return _client
+
+
+def _embed_texts(texts: list[str]) -> np.ndarray:
+    """Embed a list of texts using OpenAI text-embedding-3-small."""
+    client = _get_client()
+    # OpenAI API accepts max 2048 inputs per call; batch if needed
+    all_embeddings = []
+    batch_size = 2048
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i + batch_size]
+        response = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+        batch_embeddings = [item.embedding for item in response.data]
+        all_embeddings.extend(batch_embeddings)
+    embeddings = np.array(all_embeddings, dtype=np.float32)
+    # Normalize for cosine similarity via inner product
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    norms[norms == 0] = 1
+    embeddings = embeddings / norms
+    return embeddings
 
 
 def chunk_article(article: dict, chunk_size: int = 250, overlap: int = 50) -> list[dict]:
@@ -79,8 +99,7 @@ def build_index(chunks: list[dict]) -> tuple[faiss.IndexFlatIP, np.ndarray]:
     Uses normalized embeddings so inner product = cosine similarity.
     """
     texts = [c["text"] for c in chunks]
-    embeddings = _get_model().encode(texts, normalize_embeddings=True, show_progress_bar=False)
-    embeddings = np.array(embeddings, dtype=np.float32)
+    embeddings = _embed_texts(texts)
 
     index = faiss.IndexFlatIP(EMBEDDING_DIM)
     index.add(embeddings)
@@ -93,8 +112,7 @@ def retrieve(query: str, chunks: list[dict], index: faiss.IndexFlatIP, top_k: in
     Retrieve top-k chunks most relevant to the query.
     Ensures at least 3 different source articles are represented.
     """
-    query_embedding = _get_model().encode([query], normalize_embeddings=True, show_progress_bar=False)
-    query_embedding = np.array(query_embedding, dtype=np.float32)
+    query_embedding = _embed_texts([query])
 
     # Search more than top_k to allow for diversity enforcement
     search_k = min(top_k * 2, len(chunks))
@@ -141,7 +159,6 @@ def _recency_boost(published: str) -> float:
         return 0.0
     try:
         from datetime import datetime, timezone
-        # Handle various date formats from ET
         pub_str = published.strip()
         for fmt in [
             "%Y-%m-%dT%H:%M:%S%z",
@@ -161,7 +178,6 @@ def _recency_boost(published: str) -> float:
 
         now = datetime.now(timezone.utc)
         age_hours = max(0, (now - pub_date).total_seconds() / 3600)
-        # Max 0.15 boost for articles < 6 hours old, decaying to 0 over 7 days
         boost = max(0.0, 0.15 * (1.0 - age_hours / 168))
         return boost
     except Exception:
@@ -177,8 +193,8 @@ def semantic_rank(query: str, candidates: list[dict], title_key: str = "title", 
         return []
 
     titles = [c.get(title_key, "") for c in candidates]
-    query_emb = _get_model().encode([query], normalize_embeddings=True)
-    title_embs = _get_model().encode(titles, normalize_embeddings=True)
+    query_emb = _embed_texts([query])
+    title_embs = _embed_texts(titles)
 
     # Cosine similarity (dot product on normalized vectors)
     scores = np.dot(title_embs, query_emb.T).flatten()
@@ -190,7 +206,6 @@ def semantic_rank(query: str, candidates: list[dict], title_key: str = "title", 
         c["_sem_raw"] = sem_score
         c["_recency_boost"] = recency
 
-    # Sort by combined score descending
     ranked = sorted(candidates, key=lambda c: c["_semantic_score"], reverse=True)
     return ranked[:top_k]
 
@@ -199,18 +214,14 @@ async def rag_pipeline(query: str, articles: list[dict], top_k: int = 15) -> tup
     """
     Full RAG pipeline: chunk → embed → index → retrieve.
     Returns (retrieved_chunks, all_chunks, faiss_index) so the index can be cached for chat.
-    Runs embedding in a thread pool since it's CPU-bound.
+    Runs embedding in a thread pool since it's I/O-bound.
     """
-    # Chunk all articles
     all_chunks = chunk_all_articles(articles)
 
     if not all_chunks:
         return [], [], None
 
-    # Build index in thread pool (CPU-bound)
     index, _ = await asyncio.to_thread(build_index, all_chunks)
-
-    # Retrieve relevant chunks
     retrieved = await asyncio.to_thread(retrieve, query, all_chunks, index, top_k)
 
     return retrieved, all_chunks, index
