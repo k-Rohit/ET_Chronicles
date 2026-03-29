@@ -9,7 +9,6 @@ python-dotenv
 lxml
 lxml_html_clean
 pydantic
-sentence-transformers
 faiss-cpu
 numpy
 sse-starlette
